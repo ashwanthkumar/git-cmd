@@ -186,8 +186,14 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public void fetch(String refSpec) {
+        fetch(refSpec, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public void fetch(String refSpec, Integer depth) {
         stdOut.consumeLine("[GIT] Fetching changes");
-        List<String> args = new ArrayList<String>(Arrays.asList("fetch", "origin"));
+        String depthString = String.format("--depth=%d", depth);
+        List<String> args = new ArrayList<String>(Arrays.asList("fetch", "origin", depthString));
         if (!StringUtil.isEmpty(refSpec)) {
             args.add(refSpec);
         }
