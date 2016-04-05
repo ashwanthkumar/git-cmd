@@ -293,6 +293,11 @@ public class JGitHelper extends GitHelper {
     }
 
     @Override
+    public void fetch(String refSpec, Integer depth) {
+        fetch(refSpec); //Does not honour depth
+    }
+
+    @Override
     public void resetHard(String revision) {
         Repository repository = null;
         try {

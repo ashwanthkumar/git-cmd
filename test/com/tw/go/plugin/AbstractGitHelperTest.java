@@ -22,6 +22,7 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public abstract class AbstractGitHelperTest {
@@ -257,6 +258,33 @@ public abstract class AbstractGitHelperTest {
         assertThat(revision.getModifiedFiles().size(), is(1));
         assertThat(revision.getModifiedFiles().get(0).getFileName(), is("a.txt"));
         assertThat(revision.getModifiedFiles().get(0).getAction(), is("added"));
+    }
+
+    @Test
+    public void shouldFetchWithDefaultDepth() {
+        GitConfig config = new GitConfig("https://github.com/mdaliejaz/samplerepo.git");
+        config.setShallowClone(true);
+        GitHelper git = getHelper(config, testRepository);
+        git.cloneRepository();
+        List<Revision> revisions = git.getAllRevisions();
+        assertThat(revisions.size(), is(1));
+        git.fetch("");
+        revisions = git.getAllRevisions();
+        assertTrue(revisions.size() > 1);
+    }
+
+    @Test
+    public void shouldFetchWithGivenDepth() {
+        GitConfig config = new GitConfig("https://github.com/mdaliejaz/samplerepo.git");
+        config.setShallowClone(true);
+        GitHelper git = getHelper(config, testRepository);
+        git.cloneRepository();
+        List<Revision> revisions = git.getAllRevisions();
+        assertThat(revisions.size(), is(1));
+        git.fetch("", 3);
+        revisions = git.getAllRevisions();
+        assertTrue(revisions.size() > 1);
+        assertTrue(revisions.size() < 10);
     }
 
     @Ignore
