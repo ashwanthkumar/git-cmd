@@ -24,6 +24,7 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.util.FS;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -294,7 +295,7 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void fetch(String refSpec, Integer depth) {
-        fetch(refSpec); //Does not honour depth
+        throw new NotImplementedException();
     }
 
     @Override

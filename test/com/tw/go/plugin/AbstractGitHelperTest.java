@@ -32,6 +32,7 @@ public abstract class AbstractGitHelperTest {
     protected File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
     protected File subModuleGitRepository = new File(System.getProperty("java.io.tmpdir"), "sub-module-git-repository");
     protected File branchGitRepository = new File(System.getProperty("java.io.tmpdir"), "branch-git-repository");
+    protected File multipleCommitsGitRepository = new File(System.getProperty("java.io.tmpdir"), "multiple-commits-repository");
 
     @Before
     public void setUp() {
@@ -48,6 +49,7 @@ public abstract class AbstractGitHelperTest {
         FileUtils.deleteQuietly(simpleGitRepository);
         FileUtils.deleteQuietly(subModuleGitRepository);
         FileUtils.deleteQuietly(branchGitRepository);
+        FileUtils.deleteQuietly(multipleCommitsGitRepository);
     }
 
     protected abstract GitHelper getHelper(GitConfig gitConfig, File workingDir);
@@ -260,31 +262,33 @@ public abstract class AbstractGitHelperTest {
         assertThat(revision.getModifiedFiles().get(0).getAction(), is("added"));
     }
 
+    @Ignore
     @Test
-    public void shouldFetchWithDefaultDepth() {
-        GitConfig config = new GitConfig("https://github.com/mdaliejaz/samplerepo.git");
-        config.setShallowClone(true);
-        GitHelper git = getHelper(config, testRepository);
-        git.cloneRepository();
+    public void shouldFetchWithDefaultDepth() throws Exception {
+        extractToTmp("/sample-repository/multiple-commits-repository.zip");
+
+        GitHelper git = getHelper(new GitConfig("file://" + multipleCommitsGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
+        git.cloneOrFetch();
         List<Revision> revisions = git.getAllRevisions();
         assertThat(revisions.size(), is(1));
         git.fetch("");
         revisions = git.getAllRevisions();
-        assertTrue(revisions.size() > 1);
+        assertThat(revisions.size(), is(3));
     }
 
+    @Ignore
     @Test
-    public void shouldFetchWithGivenDepth() {
-        GitConfig config = new GitConfig("https://github.com/mdaliejaz/samplerepo.git");
-        config.setShallowClone(true);
-        GitHelper git = getHelper(config, testRepository);
-        git.cloneRepository();
+    public void shouldFetchWithGivenDepth() throws Exception {
+        extractToTmp("/sample-repository/multiple-commits-repository.zip");
+
+        GitHelper git = getHelper(new GitConfig("file://" + multipleCommitsGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
+        git.cloneOrFetch();
+
         List<Revision> revisions = git.getAllRevisions();
         assertThat(revisions.size(), is(1));
-        git.fetch("", 3);
+        git.fetch("", 2);
         revisions = git.getAllRevisions();
-        assertTrue(revisions.size() > 1);
-        assertTrue(revisions.size() < 10);
+        assertThat(revisions.size(), is(2));
     }
 
     @Ignore

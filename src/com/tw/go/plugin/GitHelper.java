@@ -94,7 +94,7 @@ public abstract class GitHelper {
     public abstract void fetch(String refSpec);
 
     public abstract void fetch(String refSpec, Integer depth);
-
+    
     public abstract void resetHard(String revision);
 
     public void fetchAndResetToHead(String refSpec) {
