@@ -200,13 +200,12 @@ public abstract class AbstractGitHelperTest {
         assertThat(submoduleFolders.get(0), is("sub-module"));
     }
 
-    @Ignore
     @Test
     public void shouldShallowClone() throws Exception {
         extractToTmp("/sample-repository/simple-git-repository-2.zip");
 
         GitHelper git = getHelper(new GitConfig("file://" + simpleGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
-        git.cloneOrFetch();
+        git.cloneRepository();
 
         assertThat(git.getCommitCount(), is(1));
 
@@ -261,13 +260,12 @@ public abstract class AbstractGitHelperTest {
         assertThat(revision.getModifiedFiles().get(0).getAction(), is("added"));
     }
 
-    @Ignore
     @Test
     public void shouldFetchWithDefaultDepth() throws Exception {
         extractToTmp("/sample-repository/multiple-commits-repository.zip");
 
         GitHelper git = getHelper(new GitConfig("file://" + multipleCommitsGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
-        git.cloneOrFetch();
+        git.cloneRepository();
         List<Revision> revisions = git.getAllRevisions();
         assertThat(revisions.size(), is(1));
         git.fetch("");
@@ -275,13 +273,12 @@ public abstract class AbstractGitHelperTest {
         assertThat(revisions.size(), is(3));
     }
 
-    @Ignore
     @Test
     public void shouldFetchWithGivenDepth() throws Exception {
         extractToTmp("/sample-repository/multiple-commits-repository.zip");
 
         GitHelper git = getHelper(new GitConfig("file://" + multipleCommitsGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
-        git.cloneOrFetch();
+        git.cloneRepository();
 
         List<Revision> revisions = git.getAllRevisions();
         assertThat(revisions.size(), is(1));
