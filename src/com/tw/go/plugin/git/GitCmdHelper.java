@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 public class GitCmdHelper extends GitHelper {
     private static final Pattern GIT_SUBMODULE_STATUS_PATTERN = Pattern.compile("^.[0-9a-fA-F]{40} (.+?)( \\(.+\\))?$");
     private static final Pattern GIT_SUBMODULE_URL_PATTERN = Pattern.compile("^submodule\\.(.+)\\.url (.+)$");
-    private static final Pattern GIT_DIFF_TREE_PATTERN = Pattern.compile("^(.)\\s+(.+)$");
+    private static final Pattern GIT_DIFF_TREE_PATTERN = Pattern.compile("^(.{1,2})\\s+(.+)$");
 
     public GitCmdHelper(GitConfig gitConfig, File workingDir) {
         this(gitConfig, workingDir, new ProcessOutputStreamConsumer(new InMemoryConsumer()), new ProcessOutputStreamConsumer(new InMemoryConsumer()));
@@ -152,7 +152,7 @@ public class GitCmdHelper extends GitHelper {
     }
 
     private ConsoleResult diffTree(String node) {
-        CommandLine gitCmd = Console.createCommand("diff-tree", "--name-status", "--root", "-r", node);
+        CommandLine gitCmd = Console.createCommand("diff-tree", "--name-status", "--root", "-r", "-c", node);
         return runAndGetOutput(gitCmd);
     }
 
