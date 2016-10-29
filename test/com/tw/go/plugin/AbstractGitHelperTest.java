@@ -31,6 +31,7 @@ public abstract class AbstractGitHelperTest {
     protected File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
     protected File subModuleGitRepository = new File(System.getProperty("java.io.tmpdir"), "sub-module-git-repository");
     protected File branchGitRepository = new File(System.getProperty("java.io.tmpdir"), "branch-git-repository");
+    protected File mergeCommitGitRepository = new File(System.getProperty("java.io.tmpdir"), "merge-commit-git-repository");
 
     @Before
     public void setUp() {
@@ -269,6 +270,16 @@ public abstract class AbstractGitHelperTest {
 
         assertThat(branchToRevisionMap.size(), is(1));
         assertThat(branchToRevisionMap.get("1"), is("aabd0f242bd40bfaaa4ce359123b2a2d976077d1"));
+    }
+
+    @Test
+    public void shouldReturnModifiedFilesForMergeCommit() throws Exception {
+        extractToTmp("/sample-repository/merge-commit-git-repository.zip");
+
+        GitHelper git = getHelper(new GitConfig(mergeCommitGitRepository.getAbsolutePath()), mergeCommitGitRepository);
+        Revision revision = git.getDetailsForRevision("66a1b17514622a8e4a620a033cca3715ef870e71");
+
+        verifyRevision(revision, "66a1b17514622a8e4a620a033cca3715ef870e71", "Merge branch 'master' into test-branch", 1477248891000L, asList(new Pair("file.txt", "modified")));
     }
 
     protected void extractToTmp(String zipResourcePath) throws IOException {
