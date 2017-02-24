@@ -23,6 +23,7 @@ import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 public abstract class AbstractGitHelperTest {
     private static final int BUFFER_SIZE = 4096;
