@@ -1,5 +1,7 @@
 # git-cmd
 
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/in.ashwanthkumar/git-cmd/badge.svg)](https://maven-badges.herokuapp.com/maven-central/in.ashwanthkumar/git-cmd)
+
 Fork of [srinivasupadhya/git-cmd](https://github.com/srinivasupadhya/git-cmd/), maintaining it so that I can publish this to maven. 
 
 <hr />
