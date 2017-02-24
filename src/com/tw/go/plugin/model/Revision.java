@@ -13,9 +13,11 @@ public class Revision {
     private String user;
     private String emailId;
     private List<ModifiedFile> modifiedFiles;
+    private boolean isMergeCommit;
 
     public Revision(String revision) {
         this.revision = revision;
+        this.isMergeCommit = false;
     }
 
     public Revision(String revision, Date timestamp, String comment, String user, String emailId, List<ModifiedFile> modifiedFiles) {
@@ -25,6 +27,7 @@ public class Revision {
         this.user = user;
         this.emailId = emailId;
         this.modifiedFiles = modifiedFiles;
+        this.isMergeCommit = false;
     }
 
     public String getRevision() {
@@ -82,5 +85,13 @@ public class Revision {
         }
         modifiedFiles.add(file);
         return file;
+    }
+
+    public boolean isMergeCommit() {
+        return isMergeCommit;
+    }
+
+    public void setMergeCommit(boolean mergeCommit) {
+        isMergeCommit = mergeCommit;
     }
 }

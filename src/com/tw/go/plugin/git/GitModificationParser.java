@@ -15,7 +15,9 @@ public class GitModificationParser {
     private static final String HASH = "(\\w+)";
     private static final String DATE = "(.+)";
     private static final String AUTHOR = "(.+)";
+    private static final String MULTIPLE_HASHES = "(.+)";
     private static final Pattern COMMIT_PATTERN = Pattern.compile("^commit" + SPACES + HASH + "$");
+    private static final Pattern MERGE_PATTERN = Pattern.compile("^Merge:" + SPACES + MULTIPLE_HASHES + "$");
     private static final Pattern AUTHOR_PATTERN = Pattern.compile("^Author:" + SPACES + AUTHOR + "$");
     private static final Pattern DATE_PATTERN = Pattern.compile("^Date:" + SPACES + DATE + "$");
     private static final Pattern COMMENT_PATTERN = Pattern.compile("^" + COMMENT_INDENT + COMMENT_TEXT + "$");
@@ -33,6 +35,10 @@ public class GitModificationParser {
         Matcher matcher = COMMIT_PATTERN.matcher(line);
         if (matcher.matches()) {
             revisions.add(new Revision(matcher.group(1), null, "", "", null, null));
+        }
+        Matcher mergeMatcher = MERGE_PATTERN.matcher(line);
+        if(mergeMatcher.matches()) {
+            revisions.getLast().setMergeCommit(true);
         }
         Matcher authorMatcher = AUTHOR_PATTERN.matcher(line);
         if (authorMatcher.matches()) {

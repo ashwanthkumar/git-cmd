@@ -280,6 +280,7 @@ public abstract class AbstractGitHelperTest {
         Revision revision = git.getDetailsForRevision("66a1b17514622a8e4a620a033cca3715ef870e71");
 
         verifyRevision(revision, "66a1b17514622a8e4a620a033cca3715ef870e71", "Merge branch 'master' into test-branch", 1477248891000L, asList(new Pair("file.txt", "modified")));
+        assertTrue("Revision should be a merge commit", revision.isMergeCommit());
     }
 
     protected void extractToTmp(String zipResourcePath) throws IOException {

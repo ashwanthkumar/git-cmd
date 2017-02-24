@@ -691,8 +691,11 @@ public class JGitHelper extends GitHelper {
                 modifiedFiles.add(new ModifiedFile(diffEntry.getNewPath(), getAction(diffEntry.getChangeType().name())));
             }
         }
+        boolean isMergeCommit = commit.getParentCount() > 1;
 
-        return new Revision(commitSHA, commitTime, comment, user, emailId, modifiedFiles);
+        Revision revision = new Revision(commitSHA, commitTime, comment, user, emailId, modifiedFiles);
+        revision.setMergeCommit(isMergeCommit);
+        return revision;
     }
 
     private String getAction(String gitAction) {
