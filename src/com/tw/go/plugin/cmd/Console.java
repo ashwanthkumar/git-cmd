@@ -30,7 +30,7 @@ public class Console {
 
             return new ConsoleResult(exitCode, stdOut.output(), stdErr.output());
         } catch (Exception e) {
-            throw new RuntimeException(getMessage("Exception", commandLine, workingDir), e);
+            throw new RuntimeException(getMessage(String.format("Exception (%s)", e.getMessage()), commandLine, workingDir), e);
         }
     }
 
