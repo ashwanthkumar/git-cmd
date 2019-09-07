@@ -39,17 +39,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <go.version>14.4.0</go.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>cd.go.plugin</groupId>
-            <artifactId>go-plugin-api</artifactId>
-            <version>${go.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
