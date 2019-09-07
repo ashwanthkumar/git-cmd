@@ -23,11 +23,6 @@ public class Console {
 
         try {
             int exitCode = executor.execute(commandLine);
-
-            if (exitCode != 0) {
-                throw new RuntimeException(getMessage("Error", commandLine, workingDir));
-            }
-
             return new ConsoleResult(exitCode, stdOut.output(), stdErr.output());
         } catch (Exception e) {
             throw new RuntimeException(getMessage(String.format("Exception (%s)", e.getMessage()), commandLine, workingDir), e);
