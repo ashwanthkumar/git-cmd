@@ -80,23 +80,23 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public String currentRevision() {
-        CommandLine gitLog = Console.createCommand("log", "-1", "--pretty=format:%H");
-        return runAndGetOutput(gitLog).stdOut().get(0);
+        CommandLine gitLog = Console.createCommand("log", "-1", "--pretty=format:%H", "--no-decorate", "--no-color");
+        return runAndGetOutput(gitLog).stdOut().stream().findFirst().orElse(null);
     }
 
     @Override
     public List<Revision> getAllRevisions() {
-        return gitLog("log", "--date=iso", "--pretty=medium");
+        return gitLog(logArgs());
     }
 
     @Override
     public Revision getLatestRevision() {
-        return gitLog("log", "-1", "--date=iso", "--pretty=medium").stream().findFirst().orElse(null);
+        return getLatestRevision(null);
     }
 
     @Override
     public Revision getLatestRevision(List<String> subPaths) {
-        return gitLog(logSubPathArgs("-1", subPaths))
+        return gitLog(logArgs(subPaths, "-1"))
                 .stream()
                 .findFirst()
                 .orElse(null);
@@ -104,24 +104,37 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public List<Revision> getRevisionsSince(String revision) {
-        return gitLog("log", String.format("%s..", revision), "--date=iso", "--pretty=medium");
+        return getRevisionsSince(revision, null);
     }
 
     @Override
     public List<Revision> getRevisionsSince(String revision, List<String> subPaths) {
-        return gitLog(logSubPathArgs(String.format("%s..", revision), subPaths));
+        return gitLog(logArgs(subPaths, String.format("%s..%s", revision, gitConfig.getRemoteBranch())));
     }
 
-    private String[] logSubPathArgs(String revision, List<String> subPaths) {
-        return Stream.concat(
-                Stream.of("log", revision, "--date=iso", "--pretty=medium", "--"),
-                subPaths.stream().map(String::trim)
-        ).toArray(String[]::new);
+    private String[] logArgs(String... revisionLimits) {
+        return logArgs(null, revisionLimits);
+    }
+
+    private String[] logArgs(List<String> subPaths, String... revisionLimits) {
+        String[] logs = Stream.of(
+                Stream.of("log", "--date=iso", "--pretty=medium", "--no-decorate", "--no-color"),
+                Stream.of(revisionLimits),
+                Stream.ofNullable(subPaths).flatMap(paths -> Stream.of("--")),
+                Stream.ofNullable(subPaths).flatMap(paths -> subPaths.stream().map(String::trim))
+        )
+                .flatMap(s -> s)
+                .filter(Objects::nonNull)
+                .toArray(String[]::new);
+        return logs;
     }
 
     @Override
     public Revision getDetailsForRevision(String sha) {
-        return gitLog("log", "-1", sha, "--date=iso", "--pretty=medium").get(0);
+        return gitLog(logArgs("-1", sha))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -206,12 +219,11 @@ public class GitCmdHelper extends GitHelper {
     @Override
     public void fetch(String refSpec) {
         stdOut.consumeLine("[GIT] Fetching changes");
-        List<String> args = new ArrayList<>(Arrays.asList("fetch", "origin"));
+        List<String> args = new ArrayList<>(Arrays.asList("fetch", "origin", "--prune", "--recurse-submodules=no"));
         if (!StringUtil.isEmpty(refSpec)) {
             args.add(refSpec);
         }
-        CommandLine gitFetch = Console.createCommand(args.toArray(new String[0]));
-        runOrBomb(gitFetch);
+        runOrBomb(Console.createCommand(args.toArray(new String[0])));
     }
 
     @Override
@@ -240,8 +252,7 @@ public class GitCmdHelper extends GitHelper {
     @Override
     public void gc() {
         stdOut.consumeLine("[GIT] Performing git gc");
-        CommandLine gitGc = Console.createCommand("gc", "--auto");
-        runOrBomb(gitGc);
+        runOrBomb(Console.createCommand("gc", "--auto"));
     }
 
     @Override

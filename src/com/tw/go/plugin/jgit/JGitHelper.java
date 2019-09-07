@@ -228,7 +228,10 @@ public class JGitHelper extends GitHelper {
     public void fetch(String refSpec) {
         try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
-            FetchCommand fetch = git.fetch().setRemoveDeletedRefs(true);
+            FetchCommand fetch = git
+                    .fetch()
+                    .setRemoveDeletedRefs(true)
+                    .setRecurseSubmodules(SubmoduleConfig.FetchRecurseSubmodulesMode.NO);
             if (!StringUtil.isEmpty(refSpec)) {
                 fetch.setRefSpecs(new RefSpec(refSpec));
             }

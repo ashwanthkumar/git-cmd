@@ -104,14 +104,13 @@ public abstract class GitHelper {
     }
 
     public void fetchAndReset(String refSpec, String revision) {
-        stdOut.consumeLine(String.format("[GIT] Fetch and reset in working directory %s", workingDir));
+        fetch(refSpec);
+        gc();
+        stdOut.consumeLine(String.format("[GIT] Reset working directory %s", workingDir));
         cleanAllUnversionedFiles();
         if (isSubmoduleEnabled()) {
             removeSubmoduleSectionsFromGitConfig();
         }
-        checkoutRemoteBranchToLocal();
-        fetch(refSpec);
-        gc();
         resetHard(revision);
         if (isSubmoduleEnabled()) {
             checkoutAllModifiedFilesInSubmodules();
