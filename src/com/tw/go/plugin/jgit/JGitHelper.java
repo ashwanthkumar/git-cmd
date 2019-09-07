@@ -321,7 +321,7 @@ public class JGitHelper extends GitHelper {
 
     private void checkoutSubmodule(SubmoduleWalk walk) {
         try (Repository submoduleRepository = walk.getRepository()) {
-            CheckoutCommand checkout = Git.wrap(submoduleRepository).checkout().setForce(true).setName("HEAD");
+            CheckoutCommand checkout = Git.wrap(submoduleRepository).checkout().setForceRefUpdate(true).setName("HEAD");
             checkout.call();
         } catch (Exception e) {
             throw new RuntimeException("sub-module checkout failed", e);
