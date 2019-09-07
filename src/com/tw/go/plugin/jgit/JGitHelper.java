@@ -28,6 +28,7 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.StreamSupport;
 
 public class JGitHelper extends GitHelper {
     public JGitHelper(GitConfig gitConfig, File workingDir) {
@@ -70,71 +71,41 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void checkoutRemoteBranchToLocal() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             CheckoutCommand checkout = git.checkout().setForce(true).setName(gitConfig.getEffectiveBranch());
             checkout.call();
         } catch (Exception e) {
             throw new RuntimeException("checkout failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public String workingRepositoryUrl() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             return repository.getConfig().getString("remote", "origin", "url");
         } catch (Exception e) {
             throw new RuntimeException("clean failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public String getCurrentBranch() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             return repository.getBranch();
         } catch (Exception e) {
             throw new RuntimeException("current branch failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public int getCommitCount() {
-        Repository repository = null;
-        int count = 0;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
-            LogCommand logCmd = git.log();
-            Iterable<RevCommit> log = logCmd.call();
-            for (RevCommit commit : log) {
-                count++;
-            }
+            return (int) StreamSupport.stream(git.log().call().spliterator(), false).count();
         } catch (Exception e) {
             throw new RuntimeException("commit count failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
-        return count;
     }
 
     @Override
@@ -144,13 +115,11 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public List<Revision> getAllRevisions() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log();
             Iterable<RevCommit> log = logCmd.call();
-            List<Revision> revisionObjs = new ArrayList<Revision>();
+            List<Revision> revisionObjs = new ArrayList<>();
             for (RevCommit commit : log) {
                 Revision revisionObj = getRevisionObj(repository, commit);
                 revisionObjs.add(revisionObj);
@@ -158,18 +127,12 @@ public class JGitHelper extends GitHelper {
             return revisionObjs;
         } catch (Exception e) {
             throw new RuntimeException("get all revisions failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public Revision getLatestRevision() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log().setMaxCount(1);
             Iterable<RevCommit> log = logCmd.call();
@@ -179,23 +142,17 @@ public class JGitHelper extends GitHelper {
             }
         } catch (Exception e) {
             throw new RuntimeException("get latest revision failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
         return null;
     }
 
     @Override
     public List<Revision> getRevisionsSince(String previousRevision) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log();
             Iterable<RevCommit> log = logCmd.call();
-            List<RevCommit> newCommits = new ArrayList<RevCommit>();
+            List<RevCommit> newCommits = new ArrayList<>();
             for (RevCommit commit : log) {
                 if (commit.getName().equals(previousRevision)) {
                     break;
@@ -203,7 +160,7 @@ public class JGitHelper extends GitHelper {
                 newCommits.add(commit);
             }
 
-            List<Revision> revisionObjs = new ArrayList<Revision>();
+            List<Revision> revisionObjs = new ArrayList<>();
             if (!newCommits.isEmpty()) {
                 for (RevCommit newCommit : newCommits) {
                     Revision revisionObj = getRevisionObj(repository, newCommit);
@@ -213,18 +170,12 @@ public class JGitHelper extends GitHelper {
             return revisionObjs;
         } catch (Exception e) {
             throw new RuntimeException("get newer revisions failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public Revision getDetailsForRevision(String sha) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log().all();
             Iterable<RevCommit> log = logCmd.call();
@@ -236,20 +187,14 @@ public class JGitHelper extends GitHelper {
             return null;
         } catch (Exception e) {
             throw new RuntimeException("get latest revision failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public Map<String, String> getBranchToRevisionMap(String pattern) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Map<String, Ref> allRefs = repository.getAllRefs();
-            Map<String, String> branchToRevisionMap = new HashMap<String, String>();
+            Map<String, String> branchToRevisionMap = new HashMap<>();
             for (String refName : allRefs.keySet()) {
                 if (refName.contains(pattern)) {
                     String branch = refName.replace(pattern, "");
@@ -260,10 +205,6 @@ public class JGitHelper extends GitHelper {
             return branchToRevisionMap;
         } catch (Exception e) {
             throw new RuntimeException("fetch failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
@@ -273,9 +214,7 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void fetch(String refSpec) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             FetchCommand fetch = git.fetch().setRemoveDeletedRefs(true);
             if (!StringUtil.isEmpty(refSpec)) {
@@ -285,90 +224,55 @@ public class JGitHelper extends GitHelper {
             fetch.call();
         } catch (Exception e) {
             throw new RuntimeException("fetch failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void resetHard(String revision) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             ResetCommand reset = git.reset().setMode(ResetCommand.ResetType.HARD).setRef(revision);
             reset.call();
         } catch (Exception e) {
             throw new RuntimeException("reset failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void cleanAllUnversionedFiles() {
-        Repository repository = null;
-        SubmoduleWalk walk = null;
-        try {
-            repository = getRepository(workingDir);
-            Git git = new Git(repository);
-
-            walk = SubmoduleWalk.forIndex(repository);
-	    if (walk != null) {
-            	while (walk.next()) {
-                	cleanSubmoduleOfAllUnversionedFiles(walk);
-            	}
-	    }
+        try (Repository repository = getRepository(workingDir);
+             Git git = new Git(repository);
+             SubmoduleWalk walk = SubmoduleWalk.forIndex(repository)) {
+            while (walk.next()) {
+                cleanSubmoduleOfAllUnversionedFiles(walk);
+            }
 
             CleanCommand clean = git.clean().setCleanDirectories(true);
             clean.call();
         } catch (Exception e) {
             throw new RuntimeException("clean failed", e);
-        } finally {
-            if (walk != null) {
-                walk.close();
-            }
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     private void cleanSubmoduleOfAllUnversionedFiles(SubmoduleWalk walk) {
-        Repository submoduleRepository = null;
-        try {
-            submoduleRepository = walk.getRepository();
-	    if (submoduleRepository != null) {
-            	CleanCommand clean = Git.wrap(submoduleRepository).clean().setCleanDirectories(true);
-            	clean.call();
-	    }
+        try (Repository submoduleRepository = walk.getRepository()) {
+            if (submoduleRepository != null) {
+                CleanCommand clean = Git.wrap(submoduleRepository).clean().setCleanDirectories(true);
+                clean.call();
+            }
         } catch (Exception e) {
             throw new RuntimeException("sub-module clean failed", e);
-        } finally {
-            if (submoduleRepository != null) {
-                submoduleRepository.close();
-            }
         }
     }
 
     @Override
     public void gc() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             GarbageCollectCommand gc = git.gc();
             gc.call();
         } catch (Exception e) {
             throw new RuntimeException("gc failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
@@ -379,31 +283,19 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public List<String> submoduleFolders() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             SubmoduleStatusCommand submoduleStatus = git.submoduleStatus();
             Map<String, SubmoduleStatus> submoduleStatusMap = submoduleStatus.call();
-            List<String> submoduleFolders = new ArrayList<String>();
-            for (String submoduleFolder : submoduleStatusMap.keySet()) {
-                submoduleFolders.add(submoduleFolder);
-            }
-            return submoduleFolders;
+            return new ArrayList<>(submoduleStatusMap.keySet());
         } catch (Exception e) {
             throw new RuntimeException("sub-module folders list failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void printSubmoduleStatus() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             SubmoduleStatusCommand submoduleStatus = git.submoduleStatus();
             Map<String, SubmoduleStatus> submoduleStatusMap = submoduleStatus.call();
@@ -412,172 +304,103 @@ public class JGitHelper extends GitHelper {
             }
         } catch (Exception e) {
             throw new RuntimeException("sub-module print status failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void checkoutAllModifiedFilesInSubmodules() {
-        Repository repository = null;
-        SubmoduleWalk walk = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir); SubmoduleWalk walk = SubmoduleWalk.forIndex(repository)) {
 
-            walk = SubmoduleWalk.forIndex(repository);
             while (walk.next()) {
                 checkoutSubmodule(walk);
             }
         } catch (Exception e) {
             throw new RuntimeException("checkout all sub-modules failed", e);
-        } finally {
-            if (walk != null) {
-                walk.close();
-            }
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     private void checkoutSubmodule(SubmoduleWalk walk) {
-        Repository submoduleRepository = null;
-        try {
-            submoduleRepository = walk.getRepository();
+        try (Repository submoduleRepository = walk.getRepository()) {
             CheckoutCommand checkout = Git.wrap(submoduleRepository).checkout().setForce(true).setName("HEAD");
             checkout.call();
         } catch (Exception e) {
             throw new RuntimeException("sub-module checkout failed", e);
-        } finally {
-            if (submoduleRepository != null) {
-                submoduleRepository.close();
-            }
         }
     }
 
     @Override
     public int getSubModuleCommitCount(String subModuleFolder) {
-        Repository repository = null;
-        Repository subModuleRepository = null;
-        int count = 0;
-        try {
-            repository = getRepository(workingDir);
-            subModuleRepository = SubmoduleWalk.getSubmoduleRepository(repository, subModuleFolder);
+        try (Repository repository = getRepository(workingDir);
+             Repository subModuleRepository = SubmoduleWalk.getSubmoduleRepository(repository, subModuleFolder)) {
             Git git = new Git(subModuleRepository);
-            Iterable<RevCommit> log = git.log().call();
-            for (RevCommit commit : log) {
-                count++;
-            }
+            return (int) StreamSupport.stream(git.log().call().spliterator(), false).count();
         } catch (Exception e) {
             throw new RuntimeException("sub-module commit count failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
-            if (subModuleRepository != null) {
-                subModuleRepository.close();
-            }
         }
-        return count;
     }
 
     @Override
     public void submoduleInit() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             git.submoduleInit().call();
         } catch (Exception e) {
             throw new RuntimeException("sub-module init failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void submoduleSync() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             git.submoduleSync().call();
         } catch (Exception e) {
             throw new RuntimeException("sub-module sync failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void submoduleUpdate() {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             git.submoduleUpdate().call();
         } catch (Exception e) {
             throw new RuntimeException("sub-module update failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void init() {
-        Repository repository = null;
         try {
             Git.init().setDirectory(workingDir).call();
 
-            repository = FileRepositoryBuilder.create(new File(workingDir.getAbsolutePath(), ".git"));
+            FileRepositoryBuilder
+                    .create(new File(workingDir.getAbsolutePath(), ".git"))
+                    .close();
         } catch (Exception e) {
             throw new RuntimeException("init failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void add(File fileToAdd) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             AddCommand add = git.add().addFilepattern(fileToAdd.getName());
             add.call();
         } catch (Exception e) {
             throw new RuntimeException("add failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     @Override
     public void commit(String message) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             CommitCommand commit = git.commit().setAuthor("author", "author@nodomain.com").setSign(false).setMessage(message);
             commit.call();
         } catch (Exception e) {
             throw new RuntimeException("commit failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
@@ -587,23 +410,12 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void submoduleAdd(String subModuleFolder, String subModuleName, String relativePath) {
-        Repository parentRepository = null;
-        Repository subModuleRepository = null;
-        try {
-            parentRepository = getRepository(workingDir);
-            subModuleRepository = getRepository(new File(subModuleFolder));
+        try (Repository parentRepository = getRepository(workingDir); Repository subModuleRepository = getRepository(new File(subModuleFolder))) {
             Git git = new Git(parentRepository);
             SubmoduleAddCommand subModuleAdd = git.submoduleAdd().setURI(subModuleRepository.getDirectory().getCanonicalPath()).setPath(relativePath);
             subModuleAdd.call();
         } catch (Exception e) {
             throw new RuntimeException("add sub-module failed", e);
-        } finally {
-            if (parentRepository != null) {
-                parentRepository.close();
-            }
-            if (subModuleRepository != null) {
-                subModuleRepository.close();
-            }
         }
     }
 
@@ -620,9 +432,7 @@ public class JGitHelper extends GitHelper {
     public void submoduleRemove(String folderName) {
         configRemoveSection(folderName);
 
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
 
             StoredConfig gitSubmodulesConfig = new FileBasedConfig(null, new File(repository.getWorkTree(), Constants.DOT_GIT_MODULES), FS.DETECTED);
             gitSubmodulesConfig.unsetSection(ConfigConstants.CONFIG_SUBMODULE_SECTION, folderName);
@@ -634,26 +444,16 @@ public class JGitHelper extends GitHelper {
             FileUtils.deleteQuietly(new File(workingDir, folderName));
         } catch (Exception e) {
             throw new RuntimeException("sub-module remove failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
     private void configRemoveSection(String folderName) {
-        Repository repository = null;
-        try {
-            repository = getRepository(workingDir);
+        try (Repository repository = getRepository(workingDir)) {
             StoredConfig repositoryConfig = repository.getConfig();
             repositoryConfig.unsetSection(ConfigConstants.CONFIG_SUBMODULE_SECTION, folderName);
             repositoryConfig.save();
         } catch (Exception e) {
             throw new RuntimeException("sub-module section remove failed", e);
-        } finally {
-            if (repository != null) {
-                repository.close();
-            }
         }
     }
 
@@ -671,7 +471,7 @@ public class JGitHelper extends GitHelper {
         String comment = commit.getFullMessage().trim();
         String user = commit.getAuthorIdent().getName();
         String emailId = commit.getAuthorIdent().getEmailAddress();
-        List<ModifiedFile> modifiedFiles = new ArrayList<ModifiedFile>();
+        List<ModifiedFile> modifiedFiles = new ArrayList<>();
         if (commit.getParentCount() == 0) {
             TreeWalk treeWalk = new TreeWalk(repository);
             treeWalk.addTree(commit.getTree());

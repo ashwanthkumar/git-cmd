@@ -10,6 +10,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,11 +29,11 @@ import static org.junit.Assert.assertTrue;
 public abstract class AbstractGitHelperTest {
     private static final int BUFFER_SIZE = 4096;
 
-    protected File testRepository = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString());
-    protected File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
-    protected File subModuleGitRepository = new File(System.getProperty("java.io.tmpdir"), "sub-module-git-repository");
-    protected File branchGitRepository = new File(System.getProperty("java.io.tmpdir"), "branch-git-repository");
-    protected File mergeCommitGitRepository = new File(System.getProperty("java.io.tmpdir"), "merge-commit-git-repository");
+    protected final File testRepository = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString());
+    protected final File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
+    protected final File subModuleGitRepository = new File(System.getProperty("java.io.tmpdir"), "sub-module-git-repository");
+    protected final File branchGitRepository = new File(System.getProperty("java.io.tmpdir"), "branch-git-repository");
+    protected final File mergeCommitGitRepository = new File(System.getProperty("java.io.tmpdir"), "merge-commit-git-repository");
 
     @Before
     public void setUp() {
@@ -54,7 +55,7 @@ public abstract class AbstractGitHelperTest {
     protected abstract GitHelper getHelper(GitConfig gitConfig, File workingDir);
 
     @Test
-    public void shouldGetVersion() throws Exception {
+    public void shouldGetVersion() {
         GitHelper git = getHelper(null, null);
         assertThat(git.version(), is(not(nullValue())));
     }
@@ -91,7 +92,7 @@ public abstract class AbstractGitHelperTest {
         assertThat(git.currentRevision(), is("012e893acea10b140688d11beaa728e8c60bd9f6"));
 
         Revision revision = git.getDetailsForRevision("012e893acea10b140688d11beaa728e8c60bd9f6");
-        verifyRevision(revision, "012e893acea10b140688d11beaa728e8c60bd9f6", "1", 1422184635000L, asList(new Pair("a.txt", "added")));
+        verifyRevision(revision, "012e893acea10b140688d11beaa728e8c60bd9f6", "1", 1422184635000L, List.of(new Pair("a.txt", "added")));
     }
 
     @Test
@@ -107,7 +108,7 @@ public abstract class AbstractGitHelperTest {
 
         Revision revision = git.getLatestRevision();
 
-        verifyRevision(revision, "012e893acea10b140688d11beaa728e8c60bd9f6", "1", 1422184635000L, asList(new Pair("a.txt", "added")));
+        verifyRevision(revision, "012e893acea10b140688d11beaa728e8c60bd9f6", "1", 1422184635000L, List.of(new Pair("a.txt", "added")));
 
         // Fetch & Get LatestRevisionsSince
         FileUtils.deleteQuietly(simpleGitRepository.getAbsoluteFile());
@@ -122,7 +123,7 @@ public abstract class AbstractGitHelperTest {
 
         assertThat(newerRevisions.size(), is(2));
         verifyRevision(newerRevisions.get(0), "24ce45d1a1427b643ae859777417bbc9f0d7cec8", "3\ntest multiline\ncomment", 1422189618000L, asList(new Pair("a.txt", "modified"), new Pair("b.txt", "added")));
-        verifyRevision(newerRevisions.get(1), "1320a78055558603a2c29d803bbaa50d3542ff50", "2", 1422189545000L, asList(new Pair("a.txt", "modified")));
+        verifyRevision(newerRevisions.get(1), "1320a78055558603a2c29d803bbaa50d3542ff50", "2", 1422189545000L, List.of(new Pair("a.txt", "modified")));
 
         // poll again
         git.cloneOrFetch();
@@ -247,7 +248,7 @@ public abstract class AbstractGitHelperTest {
         GitHelper git = getHelper(null, testRepository);
         git.init();
         File file = new File(testRepository, "a.txt");
-        FileUtils.writeStringToFile(file, "content");
+        FileUtils.writeStringToFile(file, "content", StandardCharsets.UTF_8);
         git.add(file);
         git.commit("comment");
 
@@ -280,7 +281,7 @@ public abstract class AbstractGitHelperTest {
         GitHelper git = getHelper(new GitConfig(mergeCommitGitRepository.getAbsolutePath()), mergeCommitGitRepository);
         Revision revision = git.getDetailsForRevision("66a1b17514622a8e4a620a033cca3715ef870e71");
 
-        verifyRevision(revision, "66a1b17514622a8e4a620a033cca3715ef870e71", "Merge branch 'master' into test-branch", 1477248891000L, asList(new Pair("file.txt", "modified")));
+        verifyRevision(revision, "66a1b17514622a8e4a620a033cca3715ef870e71", "Merge branch 'master' into test-branch", 1477248891000L, List.of(new Pair("file.txt", "modified")));
         assertTrue("Revision should be a merge commit", revision.isMergeCommit());
     }
 
@@ -319,7 +320,7 @@ public abstract class AbstractGitHelperTest {
     private void extractFile(ZipInputStream zipInputStream, String filePath) throws IOException {
         BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(filePath));
         byte[] bytesRead = new byte[BUFFER_SIZE];
-        int readByteCount = 0;
+        int readByteCount;
         while ((readByteCount = zipInputStream.read(bytesRead)) != -1) {
             bufferedOutputStream.write(bytesRead, 0, readByteCount);
         }

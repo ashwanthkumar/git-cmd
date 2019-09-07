@@ -2,6 +2,8 @@ package com.tw.go.plugin.model;
 
 import com.tw.go.plugin.util.StringUtil;
 
+import java.util.Objects;
+
 public class GitConfig {
     private String url;
     private String username;
@@ -121,12 +123,11 @@ public class GitConfig {
 
         if (recursiveSubModuleUpdate != gitConfig.recursiveSubModuleUpdate) return false;
         if (shallowClone != gitConfig.shallowClone) return false;
-        if (branch != null ? !branch.equals(gitConfig.branch) : gitConfig.branch != null) return false;
-        if (password != null ? !password.equals(gitConfig.password) : gitConfig.password != null) return false;
-        if (url != null ? !url.equals(gitConfig.url) : gitConfig.url != null) return false;
-        if (username != null ? !username.equals(gitConfig.username) : gitConfig.username != null) return false;
+        if (!Objects.equals(branch, gitConfig.branch)) return false;
+        if (!Objects.equals(password, gitConfig.password)) return false;
+        if (!Objects.equals(url, gitConfig.url)) return false;
 
-        return true;
+        return Objects.equals(username, gitConfig.username);
     }
 
     @Override

@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class GitHelper {
-    protected GitConfig gitConfig;
-    protected File workingDir;
-    protected ProcessOutputStreamConsumer stdOut;
-    protected ProcessOutputStreamConsumer stdErr;
+    protected final GitConfig gitConfig;
+    protected final File workingDir;
+    protected final ProcessOutputStreamConsumer stdOut;
+    protected final ProcessOutputStreamConsumer stdErr;
 
     public GitHelper(GitConfig gitConfig, File workingDir, ProcessOutputStreamConsumer stdOut, ProcessOutputStreamConsumer stdErr) {
         this.gitConfig = gitConfig;
@@ -59,7 +59,7 @@ public abstract class GitHelper {
         try {
             FileUtils.forceMkdir(workingDir);
         } catch (IOException e) {
-            new RuntimeException("Could not create directory: " + workingDir.getAbsolutePath());
+            throw new RuntimeException("Could not create directory: " + workingDir.getAbsolutePath());
         }
     }
 
