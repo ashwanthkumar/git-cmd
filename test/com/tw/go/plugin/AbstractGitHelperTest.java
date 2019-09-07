@@ -11,6 +11,8 @@ import org.junit.Test;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -18,13 +20,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public abstract class AbstractGitHelperTest {
     private static final int BUFFER_SIZE = 4096;
@@ -131,6 +132,44 @@ public abstract class AbstractGitHelperTest {
         newerRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8");
 
         assertThat(newerRevisions.isEmpty(), is(true));
+    }
+
+    @Test
+    public void shouldGetLatestRevisionForSubpaths() throws Exception {
+        extractToTmp("/sample-repository/simple-git-repository-2.zip");
+
+        GitHelper git = getHelper(new GitConfig(simpleGitRepository.getAbsolutePath()), testRepository);
+        git.cloneOrFetch();
+
+        assertThat(git.getCommitCount(), is(3));
+
+        Files.write(Paths.get(testRepository.getAbsolutePath(), "a.txt"), List.of("new content"));
+        git.add(new File("a.txt"));
+        git.commit("Edited A");
+
+        final Revision latest = git.getLatestRevision();
+        final Revision aRevision = git.getLatestRevision(List.of("a.txt"));
+        final Revision bRevision = git.getLatestRevision(List.of("b.txt"));
+
+        assertThat(aRevision.getRevision(), is(latest.getRevision()));
+        assertThat(aRevision.getModifiedFiles(), hasSize(1));
+
+        assertThat(bRevision.getRevision(), is("24ce45d1a1427b643ae859777417bbc9f0d7cec8"));
+        assertThat(bRevision.getModifiedFiles(), hasSize(2));
+
+        final Revision eitherRevision = git.getLatestRevision(List.of("a.txt", "b.txt"));
+        assertThat(eitherRevision.getRevision(), is(latest.getRevision()));
+
+        List<Revision> aRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8", List.of("a.txt"));
+        assertThat(aRevisions, hasSize(1));
+        assertThat(aRevisions.get(0).getRevision(), is(latest.getRevision()));
+
+        List<Revision> bRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8", List.of("b.txt"));
+        assertThat(bRevisions, hasSize(0));
+
+        List<Revision> eitherRevisions = git.getRevisionsSince("012e893acea10b140688d11beaa728e8c60bd9f6", List.of("a.txt","b.txt"));
+        assertThat(eitherRevisions, hasSize(3));
+        assertThat(eitherRevisions.get(2).getRevision(), is("1320a78055558603a2c29d803bbaa50d3542ff50"));
     }
 
     @Test

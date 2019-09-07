@@ -132,9 +132,15 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public Revision getLatestRevision() {
+        return getLatestRevision(null);
+    }
+
+    @Override
+    public Revision getLatestRevision(List<String> subPaths) {
         try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log().setMaxCount(1);
+            addPathsToLogCommand(logCmd, subPaths);
             Iterable<RevCommit> log = logCmd.call();
             Iterator<RevCommit> iterator = log.iterator();
             if (iterator.hasNext()) {
@@ -148,9 +154,15 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public List<Revision> getRevisionsSince(String previousRevision) {
+        return getRevisionsSince(previousRevision, null);
+    }
+
+    @Override
+    public List<Revision> getRevisionsSince(String previousRevision, List<String> subPaths) {
         try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
             LogCommand logCmd = git.log();
+            addPathsToLogCommand(logCmd, subPaths);
             Iterable<RevCommit> log = logCmd.call();
             List<RevCommit> newCommits = new ArrayList<>();
             for (RevCommit commit : log) {
@@ -463,6 +475,12 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void push() {
+    }
+
+    private void addPathsToLogCommand(LogCommand logCmd, List<String> subPaths) {
+        if (subPaths != null) {
+            subPaths.stream().map(String::trim).forEach(logCmd::addPath);
+        }
     }
 
     private Revision getRevisionObj(Repository repository, RevCommit commit) throws IOException {

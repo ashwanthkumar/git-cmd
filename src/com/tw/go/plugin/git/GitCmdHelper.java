@@ -7,7 +7,6 @@ import com.tw.go.plugin.cmd.InMemoryConsumer;
 import com.tw.go.plugin.cmd.ProcessOutputStreamConsumer;
 import com.tw.go.plugin.model.GitConfig;
 import com.tw.go.plugin.model.Revision;
-import com.tw.go.plugin.util.DateUtils;
 import com.tw.go.plugin.util.StringUtil;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
@@ -16,6 +15,7 @@ import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class GitCmdHelper extends GitHelper {
     private static final Pattern GIT_SUBMODULE_STATUS_PATTERN = Pattern.compile("^.[0-9a-fA-F]{40} (.+?)( \\(.+\\))?$");
@@ -91,12 +91,32 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public Revision getLatestRevision() {
-        return gitLog("log", "-1", "--date=iso", "--pretty=medium").get(0);
+        return gitLog("log", "-1", "--date=iso", "--pretty=medium").stream().findFirst().orElse(null);
+    }
+
+    @Override
+    public Revision getLatestRevision(List<String> subPaths) {
+        return gitLog(logSubPathArgs("-1", subPaths))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
     public List<Revision> getRevisionsSince(String revision) {
         return gitLog("log", String.format("%s..", revision), "--date=iso", "--pretty=medium");
+    }
+
+    @Override
+    public List<Revision> getRevisionsSince(String revision, List<String> subPaths) {
+        return gitLog(logSubPathArgs(String.format("%s..", revision), subPaths));
+    }
+
+    private String[] logSubPathArgs(String revision, List<String> subPaths) {
+        return Stream.concat(
+                Stream.of("log", revision, "--date=iso", "--pretty=medium", "--"),
+                subPaths.stream().map(String::trim)
+        ).toArray(String[]::new);
     }
 
     @Override

@@ -79,7 +79,11 @@ public abstract class GitHelper {
 
     public abstract Revision getLatestRevision();
 
+    public abstract Revision getLatestRevision(List<String> subPaths);
+
     public abstract List<Revision> getRevisionsSince(String revision);
+
+    public abstract List<Revision> getRevisionsSince(String revision, List<String> subPaths);
 
     public abstract Revision getDetailsForRevision(String sha);
 
