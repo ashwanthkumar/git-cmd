@@ -40,7 +40,7 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public String version() {
-        return "3.6.2.201501210735-r";
+        return "5.5.1.201910021850-r";
     }
 
     @Override
@@ -570,7 +570,7 @@ public class JGitHelper extends GitHelper {
         try {
             repository = getRepository(workingDir);
             Git git = new Git(repository);
-            CommitCommand commit = git.commit().setAuthor("author", "author@nodomain.com").setMessage(message);
+            CommitCommand commit = git.commit().setAuthor("author", "author@nodomain.com").setSign(false).setMessage(message);
             commit.call();
         } catch (Exception e) {
             throw new RuntimeException("commit failed", e);
