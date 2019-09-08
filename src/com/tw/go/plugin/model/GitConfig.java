@@ -121,6 +121,7 @@ public class GitConfig {
 
         GitConfig gitConfig = (GitConfig) o;
 
+        if (subModule != gitConfig.subModule) return false;
         if (recursiveSubModuleUpdate != gitConfig.recursiveSubModuleUpdate) return false;
         if (shallowClone != gitConfig.shallowClone) return false;
         if (!Objects.equals(branch, gitConfig.branch)) return false;
@@ -138,6 +139,7 @@ public class GitConfig {
         result = 31 * result + (branch != null ? branch.hashCode() : 0);
         result = 31 * result + (recursiveSubModuleUpdate ? 1 : 0);
         result = 31 * result + (shallowClone ? 1 : 0);
+        result = 31 * result + (subModule ? 1 : 0);
         return result;
     }
 }
