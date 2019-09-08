@@ -73,7 +73,7 @@ public class JGitHelper extends GitHelper {
     public void checkoutRemoteBranchToLocal() {
         try (Repository repository = getRepository(workingDir)) {
             Git git = new Git(repository);
-            CheckoutCommand checkout = git.checkout().setForce(true).setName(gitConfig.getEffectiveBranch());
+            CheckoutCommand checkout = git.checkout().setForceRefUpdate(true).setName(gitConfig.getEffectiveBranch());
             checkout.call();
         } catch (Exception e) {
             throw new RuntimeException("checkout failed", e);
