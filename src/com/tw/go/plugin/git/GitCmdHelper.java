@@ -45,6 +45,9 @@ public class GitCmdHelper extends GitHelper {
     @Override
     public void cloneRepository() {
         List<String> args = new ArrayList<>(Arrays.asList("clone", String.format("--branch=%s", gitConfig.getEffectiveBranch())));
+        if (gitConfig.isNoCheckout())  {
+            args.add("--no-checkout");
+        }
         if (gitConfig.isShallowClone()) {
             args.add("--depth=1");
         }
@@ -231,6 +234,11 @@ public class GitCmdHelper extends GitHelper {
         stdOut.consumeLine("[GIT] Updating working copy to revision " + revision);
         CommandLine gitResetHard = Console.createCommand("reset", "--hard", revision);
         runOrBomb(gitResetHard);
+    }
+
+    @Override
+    protected boolean shouldReset() {
+        return !gitConfig.isNoCheckout();
     }
 
     @Override

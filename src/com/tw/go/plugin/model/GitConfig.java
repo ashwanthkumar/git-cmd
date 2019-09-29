@@ -12,6 +12,7 @@ public class GitConfig {
     private boolean subModule = false;
     private boolean recursiveSubModuleUpdate = true;
     private boolean shallowClone = false;
+    private boolean noCheckout = false;
 
     public GitConfig(String url) {
         this.url = url;
@@ -114,6 +115,14 @@ public class GitConfig {
         this.shallowClone = shallowClone;
     }
 
+    public boolean isNoCheckout() {
+        return noCheckout;
+    }
+
+    public void setNoCheckout(boolean noCheckout) {
+        this.noCheckout = noCheckout;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -121,14 +130,15 @@ public class GitConfig {
 
         GitConfig gitConfig = (GitConfig) o;
 
-        if (subModule != gitConfig.subModule) return false;
-        if (recursiveSubModuleUpdate != gitConfig.recursiveSubModuleUpdate) return false;
+        if (noCheckout != gitConfig.noCheckout) return false;
         if (shallowClone != gitConfig.shallowClone) return false;
+        if (recursiveSubModuleUpdate != gitConfig.recursiveSubModuleUpdate) return false;
+        if (subModule != gitConfig.subModule) return false;
         if (!Objects.equals(branch, gitConfig.branch)) return false;
         if (!Objects.equals(password, gitConfig.password)) return false;
-        if (!Objects.equals(url, gitConfig.url)) return false;
+        if (!Objects.equals(username, gitConfig.username)) return false;
 
-        return Objects.equals(username, gitConfig.username);
+        return Objects.equals(url, gitConfig.url);
     }
 
     @Override
@@ -137,9 +147,10 @@ public class GitConfig {
         result = 31 * result + (username != null ? username.hashCode() : 0);
         result = 31 * result + (password != null ? password.hashCode() : 0);
         result = 31 * result + (branch != null ? branch.hashCode() : 0);
+        result = 31 * result + (subModule ? 1 : 0);
         result = 31 * result + (recursiveSubModuleUpdate ? 1 : 0);
         result = 31 * result + (shallowClone ? 1 : 0);
-        result = 31 * result + (subModule ? 1 : 0);
+        result = 31 * result + (noCheckout ? 1 : 0);
         return result;
     }
 }

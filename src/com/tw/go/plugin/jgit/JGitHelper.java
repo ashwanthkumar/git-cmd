@@ -57,7 +57,17 @@ public class JGitHelper extends GitHelper {
 
     @Override
     public void cloneRepository() {
-        CloneCommand clone = Git.cloneRepository().setURI(gitConfig.getUrl()).setBranch(gitConfig.getEffectiveBranch()).setDirectory(workingDir);
+        CloneCommand clone = Git.cloneRepository().
+                setURI(gitConfig.getUrl())
+                .setBranch(gitConfig.getEffectiveBranch())
+                .setDirectory(workingDir);
+
+        if (gitConfig.isNoCheckout()) {
+            stdOut.consumeLine("JGit implementation does not support noCheckout; cloning full...");
+        }
+        if (gitConfig.isShallowClone()) {
+            stdOut.consumeLine("JGit implementation does not support shallow clones; cloning full...");
+        }
         if (gitConfig.isRecursiveSubModuleUpdate()) {
             clone.setCloneSubmodules(true);
         }
@@ -251,6 +261,12 @@ public class JGitHelper extends GitHelper {
         } catch (Exception e) {
             throw new RuntimeException("reset failed", e);
         }
+    }
+
+    @Override
+    protected boolean shouldReset() {
+        // JGitHelper does not support noCheckout clones
+        return true;
     }
 
     @Override

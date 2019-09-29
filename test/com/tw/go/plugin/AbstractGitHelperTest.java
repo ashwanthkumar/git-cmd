@@ -17,7 +17,7 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.IsNot.not;
@@ -27,8 +27,8 @@ import static org.junit.Assert.*;
 public abstract class AbstractGitHelperTest {
     private static final int BUFFER_SIZE = 4096;
 
-    private final File testRepository = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString());
-    private final File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
+    protected final File testRepository = new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString());
+    protected final File simpleGitRepository = new File(System.getProperty("java.io.tmpdir"), "simple-git-repository");
     private final File subModuleGitRepository = new File(System.getProperty("java.io.tmpdir"), "sub-module-git-repository");
     private final File branchGitRepository = new File(System.getProperty("java.io.tmpdir"), "branch-git-repository");
     private final File mergeCommitGitRepository = new File(System.getProperty("java.io.tmpdir"), "merge-commit-git-repository");
@@ -48,6 +48,7 @@ public abstract class AbstractGitHelperTest {
         FileUtils.deleteQuietly(simpleGitRepository);
         FileUtils.deleteQuietly(subModuleGitRepository);
         FileUtils.deleteQuietly(branchGitRepository);
+        FileUtils.deleteQuietly(mergeCommitGitRepository);
     }
 
     protected abstract GitHelper getHelper(GitConfig gitConfig, File workingDir);
@@ -233,27 +234,7 @@ public abstract class AbstractGitHelperTest {
         assertThat(submoduleFolders.get(0), is("sub-module"));
     }
 
-    @Ignore
-    @Test
-    public void shouldShallowClone() throws Exception {
-        extractToTmp("/sample-repository/simple-git-repository-2.zip");
 
-        GitHelper git = getHelper(new GitConfig("file://" + simpleGitRepository.getAbsolutePath(), null, null, "master", false, true), testRepository);
-        git.cloneOrFetch();
-
-        assertThat(git.getCommitCount(), is(1));
-
-        Revision revision = git.getLatestRevision();
-
-        verifyRevision(revision, "24ce45d1a1427b643ae859777417bbc9f0d7cec8", "3\ntest multiline\ncomment", 1422189618000L, List.of(new Pair("a.txt", "added"), new Pair("b.txt", "added")));
-
-        // poll again
-        git.cloneOrFetch();
-
-        List<Revision> newerRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8");
-
-        assertThat(newerRevisions.isEmpty(), is(true));
-    }
 
     @Test
     public void shouldCheckoutToRevision() throws Exception {
@@ -359,7 +340,7 @@ public abstract class AbstractGitHelperTest {
         bufferedOutputStream.close();
     }
 
-    private void verifyRevision(Revision revision, String sha, String comment, long timestamp, List<Pair> files) {
+    protected void verifyRevision(Revision revision, String sha, String comment, long timestamp, List<Pair> files) {
         assertThat(revision.getRevision(), is(sha));
         assertThat(revision.getTimestamp().getTime(), is(timestamp));
         assertThat(revision.getComment(), is(comment));
