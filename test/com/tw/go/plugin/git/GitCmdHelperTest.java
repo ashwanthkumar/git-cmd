@@ -8,6 +8,8 @@ import com.tw.go.plugin.cmd.InMemoryConsumer;
 import com.tw.go.plugin.cmd.ProcessOutputStreamConsumer;
 import com.tw.go.plugin.model.GitConfig;
 import com.tw.go.plugin.model.Revision;
+import com.tw.go.plugin.model.ShallowClone;
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import java.io.File;
@@ -41,7 +43,7 @@ public class GitCmdHelperTest extends AbstractGitHelperTest {
     public void shouldShallowClone() throws Exception {
         extractToTmp("/sample-repository/simple-git-repository-2.zip");
         GitConfig config = new GitConfig("file://" + simpleGitRepository.getAbsolutePath());
-        config.setShallowClone(true);
+        config.setShallowClone(new ShallowClone(1, 2));
         GitHelper git = getHelper(config, testRepository);
 
         git.cloneOrFetch();
@@ -50,13 +52,37 @@ public class GitCmdHelperTest extends AbstractGitHelperTest {
 
         Revision revision = git.getLatestRevision();
         verifyRevision(revision, "24ce45d1a1427b643ae859777417bbc9f0d7cec8", "3\ntest multiline\ncomment", 1422189618000L, List.of(new Pair("a.txt", "added"), new Pair("b.txt", "added")));
+        List<Revision> newerRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8");
+        assertThat(newerRevisions.isEmpty(), is(true));
 
+        FileUtils.deleteQuietly(testRepository);
+
+        // Increase default depth
+        config.setShallowClone(new ShallowClone(2, 3));
         // poll again
         git.cloneOrFetch();
 
-        List<Revision> newerRevisions = git.getRevisionsSince("24ce45d1a1427b643ae859777417bbc9f0d7cec8");
+        assertThat(git.getCommitCount(), is(2));
+        verifyRevision(revision, "24ce45d1a1427b643ae859777417bbc9f0d7cec8", "3\ntest multiline\ncomment", 1422189618000L, List.of(new Pair("a.txt", "added"), new Pair("b.txt", "added")));
+    }
 
-        assertThat(newerRevisions.isEmpty(), is(true));
+    @Test
+    public void shallowCloneShouldFetchMoreCommitsOnResetIfNecessary() throws Exception {
+        extractToTmp("/sample-repository/simple-git-repository-2.zip");
+        GitConfig config = new GitConfig("file://" + simpleGitRepository.getAbsolutePath());
+        config.setShallowClone(new ShallowClone(1, 2));
+        GitHelper git = getHelper(config, testRepository);
+
+        git.cloneOrFetch();
+
+        assertThat(git.getCommitCount(), is(1));
+
+        Revision revision = git.getLatestRevision();
+        assertThat(revision.getRevision(), is("24ce45d1a1427b643ae859777417bbc9f0d7cec8"));
+
+        git.resetHard("012e893acea10b140688d11beaa728e8c60bd9f6");
+
+        assertThat(git.getCommitCount(), is(1));
     }
 
     @Test

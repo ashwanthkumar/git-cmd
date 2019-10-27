@@ -48,9 +48,10 @@ public class GitCmdHelper extends GitHelper {
         if (gitConfig.isNoCheckout())  {
             args.add("--no-checkout");
         }
-        if (gitConfig.isShallowClone()) {
-            args.add("--depth=1");
-        }
+
+        gitConfig.getShallowClone()
+                .ifPresent(settings -> args.add("--depth=" + settings.getDefaultCommitsDepth()));
+
         args.add(gitConfig.getEffectiveUrl());
         args.add(workingDir.getAbsolutePath());
         CommandLine gitClone = Console.createCommand(args.toArray(new String[0]));
@@ -229,11 +230,42 @@ public class GitCmdHelper extends GitHelper {
         runOrBomb(Console.createCommand(args.toArray(new String[0])));
     }
 
+    private void fetchToDepth(int depth) {
+        stdOut.consumeLine(String.format("[GIT] Fetching to commit depth %s", depth == Integer.MAX_VALUE ? "[INFINITE]" : depth));
+        runOrBomb(Console.createCommand("fetch", "origin", "--depth=" + depth, "--recurse-submodules=no"));
+    }
+
     @Override
     public void resetHard(String revision) {
+        gitConfig.getShallowClone().ifPresent(settings -> unshallowIfNecessary(settings.getAdditionalFetchDepth(), revision));
+
         stdOut.consumeLine("[GIT] Updating working copy to revision " + revision);
         CommandLine gitResetHard = Console.createCommand("reset", "--hard", revision);
         runOrBomb(gitResetHard);
+    }
+
+    private void unshallowIfNecessary(int additionalFetchDepth, String revision) {
+        if (branchContains(revision)) {
+            return;
+        }
+
+        stdOut.consumeLine("[GIT] Working copy is shallow clone missing revision " + revision);
+        fetchToDepth(additionalFetchDepth);
+
+        if (branchContains(revision)) {
+            return;
+        }
+        stdOut.consumeLine("[GIT] Working copy is shallow clone still missing revision " + revision + ", fetching full repo...");
+        fetchToDepth(Integer.MAX_VALUE);
+    }
+
+    private boolean branchContains(String revision) {
+        try {
+            ConsoleResult result = runAndGetOutput(Console.createCommand("branch", "-r", "--contains", revision));
+            return result.stdOut().stream().anyMatch(line -> line.contains(gitConfig.getRemoteBranch()));
+        } catch (Exception ignore) {
+            return false;
+        }
     }
 
     @Override
