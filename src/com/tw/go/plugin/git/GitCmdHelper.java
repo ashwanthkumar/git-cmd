@@ -7,8 +7,6 @@ import com.tw.go.plugin.cmd.InMemoryConsumer;
 import com.tw.go.plugin.cmd.ProcessOutputStreamConsumer;
 import com.tw.go.plugin.model.GitConfig;
 import com.tw.go.plugin.model.Revision;
-import com.tw.go.plugin.util.DateUtils;
-import com.tw.go.plugin.util.ListUtil;
 import com.tw.go.plugin.util.StringUtil;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
@@ -17,6 +15,7 @@ import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class GitCmdHelper extends GitHelper {
     private static final Pattern GIT_SUBMODULE_STATUS_PATTERN = Pattern.compile("^.[0-9a-fA-F]{40} (.+?)( \\(.+\\))?$");
@@ -33,8 +32,8 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public String version() {
-        CommandLine gitLsRemote = Console.createCommand("--version");
-        return runAndGetOutput(gitLsRemote).stdOut().get(0);
+        CommandLine gitCmd = Console.createCommand("--version");
+        return runAndGetOutput(gitCmd, new File("/")).stdOut().get(0);
     }
 
     @Override
@@ -45,13 +44,17 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public void cloneRepository() {
-        List<String> args = new ArrayList<String>(Arrays.asList("clone", String.format("--branch=%s", gitConfig.getEffectiveBranch())));
-        if (gitConfig.isShallowClone()) {
-            args.add("--depth=1");
+        List<String> args = new ArrayList<>(Arrays.asList("clone", String.format("--branch=%s", gitConfig.getEffectiveBranch())));
+        if (gitConfig.isNoCheckout())  {
+            args.add("--no-checkout");
         }
+
+        gitConfig.getShallowClone()
+                .ifPresent(settings -> args.add("--depth=" + settings.getDefaultCommitsDepth()));
+
         args.add(gitConfig.getEffectiveUrl());
         args.add(workingDir.getAbsolutePath());
-        CommandLine gitClone = Console.createCommand(ListUtil.toArray(args));
+        CommandLine gitClone = Console.createCommand(args.toArray(new String[0]));
         runAndGetOutput(gitClone, null, stdOut, stdErr);
     }
 
@@ -81,35 +84,68 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public String currentRevision() {
-        CommandLine gitLog = Console.createCommand("log", "-1", "--pretty=format:%H");
-        return runAndGetOutput(gitLog).stdOut().get(0);
+        CommandLine gitLog = Console.createCommand("log", "-1", "--pretty=format:%H", "--no-decorate", "--no-color");
+        return runAndGetOutput(gitLog).stdOut().stream().findFirst().orElse(null);
     }
 
     @Override
     public List<Revision> getAllRevisions() {
-        return gitLog("log", "--date=iso", "--pretty=medium");
+        return gitLog(logArgs());
     }
 
     @Override
     public Revision getLatestRevision() {
-        return gitLog("log", "-1", "--date=iso", "--pretty=medium").get(0);
+        return getLatestRevision(null);
+    }
+
+    @Override
+    public Revision getLatestRevision(List<String> subPaths) {
+        return gitLog(logArgs(subPaths, "-1"))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
     public List<Revision> getRevisionsSince(String revision) {
-        return gitLog("log", String.format("%s..", revision), "--date=iso", "--pretty=medium");
+        return getRevisionsSince(revision, null);
+    }
+
+    @Override
+    public List<Revision> getRevisionsSince(String revision, List<String> subPaths) {
+        return gitLog(logArgs(subPaths, String.format("%s..%s", revision, gitConfig.getRemoteBranch())));
+    }
+
+    private String[] logArgs(String... revisionLimits) {
+        return logArgs(null, revisionLimits);
+    }
+
+    private String[] logArgs(List<String> subPaths, String... revisionLimits) {
+        String[] logs = Stream.of(
+                Stream.of("log", "--date=iso", "--pretty=medium", "--no-decorate", "--no-color"),
+                Stream.of(revisionLimits),
+                Stream.ofNullable(subPaths).flatMap(paths -> Stream.of("--")),
+                Stream.ofNullable(subPaths).flatMap(paths -> subPaths.stream().map(String::trim))
+        )
+                .flatMap(s -> s)
+                .filter(Objects::nonNull)
+                .toArray(String[]::new);
+        return logs;
     }
 
     @Override
     public Revision getDetailsForRevision(String sha) {
-        return gitLog("log", "-1", sha, "--date=iso", "--pretty=medium").get(0);
+        return gitLog(logArgs("-1", sha))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
     public Map<String, String> getBranchToRevisionMap(String pattern) {
         CommandLine gitCmd = Console.createCommand("show-ref");
         List<String> outputLines = runAndGetOutput(gitCmd).stdOut();
-        Map<String, String> branchToRevisionMap = new HashMap<String, String>();
+        Map<String, String> branchToRevisionMap = new HashMap<>();
         for (String line : outputLines) {
             if (line.contains(pattern)) {
                 String[] parts = line.split(" ");
@@ -145,7 +181,7 @@ public class GitCmdHelper extends GitHelper {
 
             Matcher m = matchResultLine(resultLine);
             if (!m.find()) {
-                throw new RuntimeException(String.format("Unable to parse git-diff-tree output line: %s\nFrom output:\n %s", resultLine, ListUtil.join(diffTreeOutput, "\n")));
+                throw new RuntimeException(String.format("Unable to parse git-diff-tree output line: %s%nFrom output:%n %s", resultLine, String.join(System.lineSeparator(), diffTreeOutput)));
             }
             revision.createModifiedFile(m.group(2), parseGitAction(m.group(1).charAt(0)));
         }
@@ -187,19 +223,54 @@ public class GitCmdHelper extends GitHelper {
     @Override
     public void fetch(String refSpec) {
         stdOut.consumeLine("[GIT] Fetching changes");
-        List<String> args = new ArrayList<String>(Arrays.asList("fetch", "origin"));
+        List<String> args = new ArrayList<>(Arrays.asList("fetch", "origin", "--prune", "--recurse-submodules=no"));
         if (!StringUtil.isEmpty(refSpec)) {
             args.add(refSpec);
         }
-        CommandLine gitFetch = Console.createCommand(ListUtil.toArray(args));
-        runOrBomb(gitFetch);
+        runOrBomb(Console.createCommand(args.toArray(new String[0])));
+    }
+
+    private void fetchToDepth(int depth) {
+        stdOut.consumeLine(String.format("[GIT] Fetching to commit depth %s", depth == Integer.MAX_VALUE ? "[INFINITE]" : depth));
+        runOrBomb(Console.createCommand("fetch", "origin", "--depth=" + depth, "--recurse-submodules=no"));
     }
 
     @Override
     public void resetHard(String revision) {
+        gitConfig.getShallowClone().ifPresent(settings -> unshallowIfNecessary(settings.getAdditionalFetchDepth(), revision));
+
         stdOut.consumeLine("[GIT] Updating working copy to revision " + revision);
         CommandLine gitResetHard = Console.createCommand("reset", "--hard", revision);
         runOrBomb(gitResetHard);
+    }
+
+    private void unshallowIfNecessary(int additionalFetchDepth, String revision) {
+        if (branchContains(revision)) {
+            return;
+        }
+
+        stdOut.consumeLine("[GIT] Working copy is shallow clone missing revision " + revision);
+        fetchToDepth(additionalFetchDepth);
+
+        if (branchContains(revision)) {
+            return;
+        }
+        stdOut.consumeLine("[GIT] Working copy is shallow clone still missing revision " + revision + ", fetching full repo...");
+        fetchToDepth(Integer.MAX_VALUE);
+    }
+
+    private boolean branchContains(String revision) {
+        try {
+            ConsoleResult result = runAndGetOutput(Console.createCommand("branch", "-r", "--contains", revision));
+            return result.stdOut().stream().anyMatch(line -> line.contains(gitConfig.getRemoteBranch()));
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
+    @Override
+    protected boolean shouldReset() {
+        return !gitConfig.isNoCheckout();
     }
 
     @Override
@@ -221,24 +292,23 @@ public class GitCmdHelper extends GitHelper {
     @Override
     public void gc() {
         stdOut.consumeLine("[GIT] Performing git gc");
-        CommandLine gitGc = Console.createCommand("gc", "--auto");
-        runOrBomb(gitGc);
+        runOrBomb(Console.createCommand("gc", "--auto"));
     }
 
     @Override
     public Map<String, String> submoduleUrls() {
         CommandLine gitConfig = Console.createCommand("config", "--get-regexp", "^submodule\\..+\\.url");
-        List<String> submoduleList = new ArrayList<String>();
+        List<String> submoduleList = new ArrayList<>();
         try {
             submoduleList = runAndGetOutput(gitConfig).stdOut();
         } catch (Exception e) {
             // ignore
         }
-        Map<String, String> submoduleUrls = new HashMap<String, String>();
+        Map<String, String> submoduleUrls = new HashMap<>();
         for (String submoduleLine : submoduleList) {
             Matcher m = GIT_SUBMODULE_URL_PATTERN.matcher(submoduleLine);
             if (!m.find()) {
-                throw new RuntimeException(String.format("Unable to parse git-config output line: %s\nFrom output:\n%s", submoduleLine, ListUtil.join(submoduleList, "\n")));
+                throw new RuntimeException(String.format("Unable to parse git-config output line: %s%nFrom output:%n%s", submoduleLine, String.join(System.lineSeparator(), submoduleList)));
             }
             submoduleUrls.put(m.group(1), m.group(2));
         }
@@ -252,11 +322,11 @@ public class GitCmdHelper extends GitHelper {
     }
 
     private List<String> submoduleFolders(List<String> submoduleLines) {
-        List<String> submoduleFolders = new ArrayList<String>();
+        List<String> submoduleFolders = new ArrayList<>();
         for (String submoduleLine : submoduleLines) {
             Matcher m = GIT_SUBMODULE_STATUS_PATTERN.matcher(submoduleLine);
             if (!m.find()) {
-                throw new RuntimeException(String.format("Unable to parse git-submodule output line: %s\nFrom output:\n%s", submoduleLine, ListUtil.join(submoduleLines, "\n")));
+                throw new RuntimeException(String.format("Unable to parse git-submodule output line: %s%nFrom output:%n%s", submoduleLine, String.join(System.lineSeparator(), submoduleLines)));
             }
             submoduleFolders.add(m.group(1));
         }
@@ -324,10 +394,7 @@ public class GitCmdHelper extends GitHelper {
 
     @Override
     public void commitOnDate(String message, Date commitDate) {
-        Map<String, String> env = new HashMap<String, String>();
-        env.put("GIT_AUTHOR_DATE", DateUtils.formatRFC822(commitDate));
         CommandLine gitCmd = Console.createCommand("commit", "-m", message);
-        // TODO: set env.
         runOrBomb(gitCmd);
     }
 
@@ -381,8 +448,8 @@ public class GitCmdHelper extends GitHelper {
         runOrBomb(gitCommit);
     }
 
-    private ConsoleResult runOrBomb(CommandLine gitCmd) {
-        return runAndGetOutput(gitCmd, workingDir, stdOut, stdErr);
+    private void runOrBomb(CommandLine gitCmd) {
+        runAndGetOutput(gitCmd, workingDir, stdOut, stdErr);
     }
 
     private ConsoleResult runAndGetOutput(CommandLine gitCmd) {

@@ -2,6 +2,9 @@ package com.tw.go.plugin.model;
 
 import com.tw.go.plugin.util.StringUtil;
 
+import java.util.Objects;
+import java.util.Optional;
+
 public class GitConfig {
     private String url;
     private String username;
@@ -9,7 +12,8 @@ public class GitConfig {
     private String branch;
     private boolean subModule = false;
     private boolean recursiveSubModuleUpdate = true;
-    private boolean shallowClone = false;
+    private boolean noCheckout = false;
+    private Optional<ShallowClone> shallowClone = Optional.empty();
 
     public GitConfig(String url) {
         this.url = url;
@@ -25,7 +29,7 @@ public class GitConfig {
         this.password = password;
         this.branch = branch;
         this.recursiveSubModuleUpdate = recursiveSubModuleUpdate;
-        this.shallowClone = shallowClone;
+        this.shallowClone = shallowClone ? Optional.of(new ShallowClone()) : Optional.empty();
     }
 
     public boolean isRemoteUrl() {
@@ -105,38 +109,42 @@ public class GitConfig {
     }
 
     public boolean isShallowClone() {
+        return shallowClone.isPresent();
+    }
+
+    public Optional<ShallowClone> getShallowClone() {
         return shallowClone;
     }
 
-    public void setShallowClone(boolean shallowClone) {
-        this.shallowClone = shallowClone;
+    public void setShallowClone(ShallowClone shallowClone) {
+        this.shallowClone = Optional.of(shallowClone);
+    }
+
+    public boolean isNoCheckout() {
+        return noCheckout;
+    }
+
+    public void setNoCheckout(boolean noCheckout) {
+        this.noCheckout = noCheckout;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         GitConfig gitConfig = (GitConfig) o;
-
-        if (recursiveSubModuleUpdate != gitConfig.recursiveSubModuleUpdate) return false;
-        if (shallowClone != gitConfig.shallowClone) return false;
-        if (branch != null ? !branch.equals(gitConfig.branch) : gitConfig.branch != null) return false;
-        if (password != null ? !password.equals(gitConfig.password) : gitConfig.password != null) return false;
-        if (url != null ? !url.equals(gitConfig.url) : gitConfig.url != null) return false;
-        if (username != null ? !username.equals(gitConfig.username) : gitConfig.username != null) return false;
-
-        return true;
+        return subModule == gitConfig.subModule &&
+                recursiveSubModuleUpdate == gitConfig.recursiveSubModuleUpdate &&
+                noCheckout == gitConfig.noCheckout &&
+                Objects.equals(url, gitConfig.url) &&
+                Objects.equals(username, gitConfig.username) &&
+                Objects.equals(password, gitConfig.password) &&
+                Objects.equals(branch, gitConfig.branch) &&
+                shallowClone.equals(gitConfig.shallowClone);
     }
 
     @Override
     public int hashCode() {
-        int result = url != null ? url.hashCode() : 0;
-        result = 31 * result + (username != null ? username.hashCode() : 0);
-        result = 31 * result + (password != null ? password.hashCode() : 0);
-        result = 31 * result + (branch != null ? branch.hashCode() : 0);
-        result = 31 * result + (recursiveSubModuleUpdate ? 1 : 0);
-        result = 31 * result + (shallowClone ? 1 : 0);
-        return result;
+        return Objects.hash(url, username, password, branch, subModule, recursiveSubModuleUpdate, noCheckout, shallowClone);
     }
 }

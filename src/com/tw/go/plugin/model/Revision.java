@@ -1,7 +1,5 @@
 package com.tw.go.plugin.model;
 
-import com.tw.go.plugin.util.ListUtil;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -80,8 +78,8 @@ public class Revision {
 
     public final ModifiedFile createModifiedFile(String filename, String action) {
         ModifiedFile file = new ModifiedFile(filename, action);
-        if (ListUtil.isEmpty(modifiedFiles)) {
-            modifiedFiles = new ArrayList<ModifiedFile>();
+        if (modifiedFiles == null) {
+            modifiedFiles = new ArrayList<>();
         }
         modifiedFiles.add(file);
         return file;

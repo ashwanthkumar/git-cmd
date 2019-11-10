@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class GitHelper {
-    protected GitConfig gitConfig;
-    protected File workingDir;
-    protected ProcessOutputStreamConsumer stdOut;
-    protected ProcessOutputStreamConsumer stdErr;
+    protected final GitConfig gitConfig;
+    protected final File workingDir;
+    protected final ProcessOutputStreamConsumer stdOut;
+    protected final ProcessOutputStreamConsumer stdErr;
 
     public GitHelper(GitConfig gitConfig, File workingDir, ProcessOutputStreamConsumer stdOut, ProcessOutputStreamConsumer stdErr) {
         this.gitConfig = gitConfig;
@@ -59,7 +59,7 @@ public abstract class GitHelper {
         try {
             FileUtils.forceMkdir(workingDir);
         } catch (IOException e) {
-            new RuntimeException("Could not create directory: " + workingDir.getAbsolutePath());
+            throw new RuntimeException("Could not create directory: " + workingDir.getAbsolutePath());
         }
     }
 
@@ -79,7 +79,11 @@ public abstract class GitHelper {
 
     public abstract Revision getLatestRevision();
 
+    public abstract Revision getLatestRevision(List<String> subPaths);
+
     public abstract List<Revision> getRevisionsSince(String revision);
+
+    public abstract List<Revision> getRevisionsSince(String revision, List<String> subPaths);
 
     public abstract Revision getDetailsForRevision(String sha);
 
@@ -100,21 +104,25 @@ public abstract class GitHelper {
     }
 
     public void fetchAndReset(String refSpec, String revision) {
-        stdOut.consumeLine(String.format("[GIT] Fetch and reset in working directory %s", workingDir));
-        cleanAllUnversionedFiles();
-        if (isSubmoduleEnabled()) {
-            removeSubmoduleSectionsFromGitConfig();
-        }
-        checkoutRemoteBranchToLocal();
         fetch(refSpec);
         gc();
-        resetHard(revision);
-        if (isSubmoduleEnabled()) {
-            checkoutAllModifiedFilesInSubmodules();
-            updateSubmoduleWithInit();
+
+        if (shouldReset()) {
+            stdOut.consumeLine(String.format("[GIT] Reset working directory %s", workingDir));
+            cleanAllUnversionedFiles();
+            if (isSubmoduleEnabled()) {
+                removeSubmoduleSectionsFromGitConfig();
+            }
+            resetHard(revision);
+            if (isSubmoduleEnabled()) {
+                checkoutAllModifiedFilesInSubmodules();
+                updateSubmoduleWithInit();
+            }
+            cleanAllUnversionedFiles();
         }
-        cleanAllUnversionedFiles();
     }
+
+    protected abstract boolean shouldReset();
 
     public abstract void cleanAllUnversionedFiles();
 

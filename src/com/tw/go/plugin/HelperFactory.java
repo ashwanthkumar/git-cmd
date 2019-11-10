@@ -43,10 +43,8 @@ public class HelperFactory {
     private static boolean isAvailable(GitHelper gitCmd) {
         try {
             gitCmd.version(); // make sure git is available
-            // TODO: check version > 1.8
             return true;
-        } catch (Exception e) {
-            // ignore
+        } catch (Exception ignore) {
         }
         return false;
     }

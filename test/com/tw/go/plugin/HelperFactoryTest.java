@@ -4,7 +4,7 @@ import com.tw.go.plugin.git.GitCmdHelper;
 import com.tw.go.plugin.model.GitConfig;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
 
 public class HelperFactoryTest {
